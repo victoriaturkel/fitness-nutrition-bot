@@ -52,7 +52,7 @@ def webhook():
 if __name__ == '__main__':
     import asyncio
     async def main():
-        webhook_url = "https://your-render-url.onrender.com/webhook"  # замени на свой URL
+        webhook_url = "https://fitness-nutrition-bot-7.onrender.com"  # замени на свой URL
         await bot_app.bot.set_webhook(webhook_url)
         print("Webhook установлен")
 
