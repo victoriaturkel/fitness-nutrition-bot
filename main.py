@@ -1,53 +1,60 @@
+import os
+import json
+from flask import Flask, request
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import openai
-import os
-from flask import Flask, request
 
-# Инициализация OpenAI и Telegram
+# Настройки
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 openai.api_key = OPENAI_API_KEY
 
-# Инициализация Flask для вебхуков
-app = Flask(__name__)
+# Создаём Flask-приложение
+flask_app = Flask(__name__)
 
-# Бот
+# Создаём Telegram-приложение
+bot_app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+
+# Команда /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Привет! Я твой фитнес- и нутрициолог-бот.")
+    await update.message.reply_text("Привет! Я твой нутрициолог и фитнес-тренер!")
 
+# Команда /ask
 async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = ' '.join(context.args)
     if not user_message:
-        await update.message.reply_text("Напиши вопрос после команды /ask")
+        await update.message.reply_text("Напиши свой вопрос после команды /ask")
         return
     
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
-        messages=[{"role": "system", "content": "Ты профессиональный нутрициолог и фитнес-тренер, отвечай ясно и с заботой"},
-                  {"role": "user", "content": user_message}]
+        messages=[
+            {"role": "system", "content": "Ты профессиональный нутрициолог и фитнес-тренер"},
+            {"role": "user", "content": user_message}
+        ]
     )
     reply = response['choices'][0]['message']['content']
     await update.message.reply_text(reply)
 
-# Настройка приложения
-app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("ask", ask))
+# Добавляем команды
+bot_app.add_handler(CommandHandler("start", start))
+bot_app.add_handler(CommandHandler("ask", ask))
 
-@app.route('/webhook', methods=['POST'])
+# Webhook обработчик
+@flask_app.route("/webhook", methods=["POST"])
 def webhook():
-    if request.method == 'POST':
-        json_str = request.get_data().decode('UTF-8')
-        update = Update.de_json(json.loads(json_str), app.bot)
-        app.dispatcher.process_update(update)
-        return 'ok', 200
+    update = Update.de_json(request.get_json(force=True), bot_app.bot)
+    bot_app.update_queue.put_nowait(update)
+    return "ok"
 
-# Устанавливаем вебхук
-def set_webhook():
-    url = "https://your-render-url.onrender.com/webhook"  # Замени на свой URL от Render
-    app.bot.set_webhook(url)
-
+# Устанавливаем webhook при запуске
 if __name__ == '__main__':
-    set_webhook()  # Установим вебхук
-    app.run(debug=True)
+    import asyncio
+    async def main():
+        webhook_url = "https://your-render-url.onrender.com/webhook"  # замени на свой URL
+        await bot_app.bot.set_webhook(webhook_url)
+        print("Webhook установлен")
+
+    asyncio.run(main())
+    flask_app.run(host="0.0.0.0", port=10000)
