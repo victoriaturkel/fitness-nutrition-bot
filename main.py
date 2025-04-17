@@ -4,16 +4,17 @@ from quart import Quart, request
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# Ключи из переменных окружения
+# Ключи
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 openai.api_key = OPENAI_API_KEY
 
 # Quart-приложение
 app = Quart(__name__)
+app.config["PROVIDE_AUTOMATIC_OPTIONS"] = False  # Добавляем эту строку
 telegram_app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
-# Команды Telegram
+# Команды
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Привет! Я твой нутрициолог и фитнес-тренер!")
 
@@ -23,23 +24,20 @@ async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Напиши свой вопрос после команды /ask")
         return
 
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "Ты профессиональный нутрициолог и фитнес-тренер"},
-                {"role": "user", "content": user_message}
-            ]
-        )
-        reply = response['choices'][0]['message']['content']
-        await update.message.reply_text(reply)
-    except Exception as e:
-        await update.message.reply_text(f"Ошибка при запросе к OpenAI: {e}")
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "Ты профессиональный нутрициолог и фитнес-тренер"},
+            {"role": "user", "content": user_message}
+        ]
+    )
+    reply = response['choices'][0]['message']['content']
+    await update.message.reply_text(reply)
 
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(CommandHandler("ask", ask))
 
-# Webhook от Telegram
+# Webhook
 @app.route("/webhook", methods=["POST"])
 async def webhook():
     data = await request.get_json()
@@ -47,14 +45,13 @@ async def webhook():
     await telegram_app.process_update(update)
     return "ok"
 
-# Установка webhook при старте
+# Установка webhook
 @app.before_serving
 async def setup():
-    await telegram_app.initialize()
     await telegram_app.bot.set_webhook("https://fitness-nutrition-bot-7.onrender.com/webhook")
 
-# Запуск сервера
 if __name__ == "__main__":
     import asyncio
     port = int(os.environ.get("PORT", 5000))
-    asyncio.run(app.run_task(host="0.0.0.0", port=port))
+    asyncio.create_task(telegram_app.initialize())
+    app.run(host="0.0.0.0", port=port)
