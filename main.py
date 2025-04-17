@@ -3,7 +3,6 @@ import openai
 from quart import Quart, request
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-import asyncio
 
 # Ключи
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -12,9 +11,6 @@ openai.api_key = OPENAI_API_KEY
 
 # Quart-приложение
 app = Quart(__name__)
-# Исправление для совместимости Flask 3.0+ и Quart
-app.config["PROVIDE_AUTOMATIC_OPTIONS"] = True
-
 telegram_app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
 # Команды
@@ -51,10 +47,10 @@ async def webhook():
 # Установка webhook
 @app.before_serving
 async def setup():
+    await telegram_app.initialize()
     await telegram_app.bot.set_webhook("https://fitness-nutrition-bot-7.onrender.com/webhook")
 
-# Запуск приложения
 if __name__ == "__main__":
+    import asyncio
     port = int(os.environ.get("PORT", 5000))
-    # Запуск сервера Quart
     asyncio.run(app.run_task(host="0.0.0.0", port=port))
