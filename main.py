@@ -45,11 +45,11 @@ def webhook():
     asyncio.run(telegram_app.process_update(update))
     return "ok"
 
-# Установка webhook при запуске
-@app.before_first_request
-def setup_webhook():
-    asyncio.run(telegram_app.bot.set_webhook("https://fitness-nutrition-bot-7.onrender.com/webhook"))
+async def setup_webhook():
+    await telegram_app.initialize()
+    await telegram_app.bot.set_webhook("https://fitness-nutrition-bot-7.onrender.com/webhook")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
+    asyncio.run(setup_webhook())
     app.run(host="0.0.0.0", port=port)
