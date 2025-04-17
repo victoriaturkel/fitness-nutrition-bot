@@ -1,19 +1,16 @@
 import os
-import json
-from flask import Flask, request
+import openai
+from quart import Quart, request
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-import openai
 
-# Настройки
+# Ключи
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 openai.api_key = OPENAI_API_KEY
 
-# Flask-приложение
-app = Flask(__name__)
-
-# Telegram-приложение
+# Quart-приложение
+app = Quart(__name__)
 telegram_app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
 # Команды
@@ -36,28 +33,24 @@ async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply = response['choices'][0]['message']['content']
     await update.message.reply_text(reply)
 
-# Добавляем команды
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(CommandHandler("ask", ask))
 
 # Webhook
 @app.route("/webhook", methods=["POST"])
-def webhook():
-    data = request.get_json(force=True)
-    print("Получен запрос от Telegram:", data)  # Логируем запрос от Telegram
+async def webhook():
+    data = await request.get_json()
     update = Update.de_json(data, telegram_app.bot)
-    telegram_app.create_task(telegram_app.process_update(update))
+    await telegram_app.process_update(update)
     return "ok"
 
 # Установка webhook
-def setup_webhook():
-    url = "https://fitness-nutrition-bot-7.onrender.com/webhook"
-    telegram_app.bot.set_webhook(url)
+@app.before_serving
+async def setup():
+    await telegram_app.bot.set_webhook("https://fitness-nutrition-bot-7.onrender.com/webhook")
 
-if __name__ == '__main__':
-    # Проверка порта для Render
-    port = int(os.environ.get("PORT", 5000))  # если порт не задан, используем 5000
-    # Запуск webhook
-    setup_webhook()
-    # Запуск Flask-приложения
-    app.run(host='0.0.0.0', port=port)
+if __name__ == "__main__":
+    import asyncio
+    port = int(os.environ.get("PORT", 5000))
+    asyncio.create_task(telegram_app.initialize())
+    app.run(host="0.0.0.0", port=port)
