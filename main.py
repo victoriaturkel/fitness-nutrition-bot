@@ -36,6 +36,7 @@ async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply = response['choices'][0]['message']['content']
     await update.message.reply_text(reply)
 
+# Добавляем команды
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(CommandHandler("ask", ask))
 
@@ -43,6 +44,7 @@ telegram_app.add_handler(CommandHandler("ask", ask))
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.get_json(force=True)
+    print("Получен запрос от Telegram:", data)  # Логируем запрос от Telegram
     update = Update.de_json(data, telegram_app.bot)
     telegram_app.create_task(telegram_app.process_update(update))
     return "ok"
@@ -54,5 +56,9 @@ async def setup_webhook():
 
 if __name__ == '__main__':
     import asyncio
+    # Проверка порта для Render
+    port = int(os.environ.get("PORT", 5000))  # если порт не задан, используем 5000
+    # Запуск webhook
     asyncio.run(setup_webhook())
-    app.run(host='0.0.0.0', port=10000)
+    # Запуск Flask-приложения
+    app.run(host='0.0.0.0', port=port)
