@@ -12,6 +12,8 @@ openai.api_key = OPENAI_API_KEY
 
 # Quart-приложение
 app = Quart(__name__)
+# Исправление для совместимости Flask 3.0+ и Quart
+app.config["PROVIDE_AUTOMATIC_OPTIONS"] = True
 
 telegram_app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
@@ -53,7 +55,6 @@ async def setup():
 
 # Запуск приложения
 if __name__ == "__main__":
-    import asyncio
     port = int(os.environ.get("PORT", 5000))
     # Запуск сервера Quart
     asyncio.run(app.run_task(host="0.0.0.0", port=port))
