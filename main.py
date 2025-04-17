@@ -1,6 +1,6 @@
 import os
 import openai
-from flask import Flask, request
+from quart import Quart, request
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
@@ -9,9 +9,8 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 openai.api_key = OPENAI_API_KEY
 
-# Flask-приложение
-app = Flask(__name__)
-
+# Quart-приложение
+app = Quart(__name__)
 telegram_app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
 # Команды
@@ -39,16 +38,19 @@ telegram_app.add_handler(CommandHandler("ask", ask))
 
 # Webhook
 @app.route("/webhook", methods=["POST"])
-def webhook():
-    data = request.get_json()
+async def webhook():
+    data = await request.get_json()
     update = Update.de_json(data, telegram_app.bot)
-    telegram_app.process_update(update)
+    await telegram_app.process_update(update)
     return "ok"
 
 # Установка webhook
-@app.before_first_request
-def setup():
-    telegram_app.bot.set_webhook("https://fitness-nutrition-bot-7.onrender.com/webhook")
+@app.before_serving
+async def setup():
+    await telegram_app.initialize()
+    await telegram_app.bot.set_webhook("https://fitness-nutrition-bot-7.onrender.com/webhook")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    import asyncio
+    port = int(os.environ.get("PORT", 5000))
+    asyncio.run(app.run_task(host="0.0.0.0", port=port))
