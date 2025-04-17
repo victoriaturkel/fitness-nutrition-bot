@@ -11,7 +11,9 @@ openai.api_key = OPENAI_API_KEY
 
 # Quart-приложение
 app = Quart(__name__)
-app.config["PROVIDE_AUTOMATIC_OPTIONS"] = False  # Добавляем эту строку
+app.config['TRAP_BAD_REQUEST_ERRORS'] = True
+app.config['PROVIDE_AUTOMATIC_OPTIONS'] = False  # Добавлено для предотвращения ошибки
+
 telegram_app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
 # Команды
