@@ -4,7 +4,6 @@ from flask import Flask, request
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import openai
-import asyncio
 
 # Настройки
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -17,11 +16,10 @@ app = Flask(__name__)
 # Telegram-приложение
 telegram_app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
-# /start
+# Команды
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Привет! Я твой нутрициолог и фитнес-тренер!")
 
-# /ask
 async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = ' '.join(context.args)
     if not user_message:
@@ -38,16 +36,15 @@ async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply = response['choices'][0]['message']['content']
     await update.message.reply_text(reply)
 
-# Добавляем команды
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(CommandHandler("ask", ask))
 
 # Webhook
 @app.route("/webhook", methods=["POST"])
-async def webhook():
+def webhook():
     data = request.get_json(force=True)
     update = Update.de_json(data, telegram_app.bot)
-    await telegram_app.process_update(update)
+    telegram_app.create_task(telegram_app.process_update(update))
     return "ok"
 
 # Установка webhook
@@ -56,6 +53,6 @@ async def setup_webhook():
     await telegram_app.bot.set_webhook(url)
 
 if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(setup_webhook())
+    import asyncio
+    asyncio.run(setup_webhook())
     app.run(host='0.0.0.0', port=10000)
