@@ -37,19 +37,26 @@ async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(CommandHandler("ask", ask))
 
-# Webhook
+# Webhook (асинхронно обрабатываем обновления)
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.get_json()
     update = Update.de_json(data, telegram_app.bot)
-    asyncio.run(telegram_app.process_update(update))
+
+    loop = asyncio.get_event_loop()
+    if loop.is_closed():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    loop.create_task(telegram_app.process_update(update))
     return "ok"
 
-async def setup_webhook():
+# Установка webhook перед запуском сервера
+async def setup():
     await telegram_app.initialize()
     await telegram_app.bot.set_webhook("https://fitness-nutrition-bot-7.onrender.com/webhook")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    asyncio.run(setup_webhook())
+    asyncio.run(setup())
     app.run(host="0.0.0.0", port=port)
