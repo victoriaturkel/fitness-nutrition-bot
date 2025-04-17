@@ -50,15 +50,14 @@ def webhook():
     return "ok"
 
 # Установка webhook
-async def setup_webhook():
+def setup_webhook():
     url = "https://fitness-nutrition-bot-7.onrender.com/webhook"
-    await telegram_app.bot.set_webhook(url)
+    telegram_app.bot.set_webhook(url)
 
 if __name__ == '__main__':
-    import asyncio
     # Проверка порта для Render
     port = int(os.environ.get("PORT", 5000))  # если порт не задан, используем 5000
     # Запуск webhook
-    asyncio.run(setup_webhook())
+    setup_webhook()
     # Запуск Flask-приложения
     app.run(host='0.0.0.0', port=port)
