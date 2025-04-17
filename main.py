@@ -12,7 +12,8 @@ openai.api_key = OPENAI_API_KEY
 # Quart-приложение
 app = Quart(__name__)
 app.config['TRAP_BAD_REQUEST_ERRORS'] = True
-app.config['PROVIDE_AUTOMATIC_OPTIONS'] = False  # Добавлено для предотвращения ошибки
+app.config['PROVIDE_AUTOMATIC_OPTIONS'] = False  # Чтобы избежать ошибки Flask
+app.config['PROPAGATE_EXCEPTIONS'] = True  # Дополнительно для отладки
 
 telegram_app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
